@@ -315,6 +315,23 @@ git pull
 vagrant provision
 ```
 
+### `/workspace` reports an input/output error
+
+This usually means VMware's HGFS shared-folder mount became stale. From the
+`lab/` directory, refresh the affected machines:
+
+```bash
+vagrant reload attacker target --provision
+```
+
+Then verify the repository mount and Git metadata:
+
+```bash
+vagrant ssh attacker -c 'git -C /workspace status'
+vagrant ssh target -c 'git -C /workspace status'
+vagrant ssh ids -c 'git -C /workspace status'
+```
+
 ## Safety rules
 
 - Run scanning and attack tools only against the private lab addresses listed

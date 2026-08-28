@@ -3,7 +3,7 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y --no-install-recommends nginx openssh-server python3
+apt-get install -y --no-install-recommends git nginx openssh-server python3
 
 cat >/var/www/html/index.html <<'EOF'
 <!doctype html>

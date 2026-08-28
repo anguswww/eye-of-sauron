@@ -3,7 +3,7 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y --no-install-recommends curl hping3 iproute2 nmap netcat-openbsd
+apt-get install -y --no-install-recommends curl git hping3 iproute2 nmap netcat-openbsd
 
 cat >/etc/systemd/system/ids-lab-route.service <<'EOF'
 [Unit]
