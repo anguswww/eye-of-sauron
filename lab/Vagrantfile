@@ -1,0 +1,96 @@
+# frozen_string_literal: true
+
+Vagrant.configure("2") do |config|
+  config.vm.box_check_update = false
+  # Leave room for SSH plus the desktop box's optional RDP forwarding when
+  # several lab VMs already have locally reserved ports.
+  config.vm.usable_port_range = 2200..2299
+
+  desktop_box = ENV.fetch(
+    "UBUNTU_DESKTOP_BOX",
+    "gusztavvargadr/ubuntu-desktop-2404-lts"
+  )
+  desktop_box_version = ENV.fetch("UBUNTU_DESKTOP_BOX_VERSION", "2607.0.0")
+  server_box = ENV.fetch("UBUNTU_SERVER_BOX", "bento/ubuntu-24.04")
+  server_box_version = ENV.fetch("UBUNTU_SERVER_BOX_VERSION", "202510.26.0")
+
+  # Make the complete repository available to every VM while keeping the
+  # Vagrant environment itself in the lab directory.
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.synced_folder "..", "/workspace"
+
+  # Vagrant keeps its first (NAT) adapter for provisioning. The two private
+  # networks below carry lab traffic and keep the IDS inline between peers.
+  machines = {
+    "attacker" => {
+      box: desktop_box,
+      box_version: desktop_box_version,
+      hostname: "ids-attacker",
+      memory: 3072,
+      cpus: 2,
+      networks: [["192.168.56.10", 2]],
+      ssh_port: 2222,
+      provision: "provision/attacker.sh",
+      desktop: true
+    },
+    "target" => {
+      box: server_box,
+      box_version: server_box_version,
+      hostname: "ids-target",
+      memory: 1024,
+      cpus: 1,
+      networks: [["192.168.57.20", 2]],
+      ssh_port: 2223,
+      provision: "provision/target.sh",
+      desktop: false
+    },
+    "ids" => {
+      box: desktop_box,
+      box_version: desktop_box_version,
+      hostname: "ids-sensor",
+      memory: 3072,
+      cpus: 2,
+      networks: [["192.168.56.30", 2], ["192.168.57.30", 3]],
+      ssh_port: 2224,
+      provision: "provision/ids.sh",
+      desktop: true
+    }
+  }
+
+  machines.each do |name, machine|
+    config.vm.define name do |node|
+      node.vm.box = machine[:box]
+      node.vm.box_version = machine[:box_version]
+      node.vm.hostname = machine[:hostname]
+      # A secondary loopback address avoids false port-collision results from
+      # recent VMware Fusion NAT services while keeping SSH host-only.
+      node.vm.network "forwarded_port",
+                      guest: 22,
+                      host: machine[:ssh_port],
+                      host_ip: "127.0.0.2",
+                      id: "ssh",
+                      auto_correct: true
+
+      machine[:networks].each do |address, adapter|
+        node.vm.network "private_network", ip: address, adapter: adapter
+      end
+
+      node.vm.provider "vmware_desktop" do |provider|
+        provider.gui = true
+        provider.vmx["displayName"] = "Eye of Sauron - #{name}"
+        provider.vmx["memsize"] = machine[:memory].to_s
+        provider.vmx["numvcpus"] = machine[:cpus].to_s
+      end
+
+      # This also makes the lab usable with VirtualBox when VMware is not
+      # available, provided that the selected boxes support that provider.
+      node.vm.provider "virtualbox" do |provider|
+        provider.gui = machine[:desktop]
+        provider.memory = machine[:memory]
+        provider.cpus = machine[:cpus]
+      end
+
+      node.vm.provision "shell", path: machine[:provision]
+    end
+  end
+end

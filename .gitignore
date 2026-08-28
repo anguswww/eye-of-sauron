@@ -1,0 +1,13 @@
+# Vagrant state and VMware images are generated locally, never shared in Git.
+**/.vagrant/
+*.box
+*.ova
+*.vmdk
+*.vmem
+*.vmsn
+*.vmss
+*.vmx
+
+# Packet captures may be large or contain sensitive traffic.
+*.pcap
+*.pcapng
