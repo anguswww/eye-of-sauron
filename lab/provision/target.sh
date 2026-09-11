@@ -29,5 +29,5 @@ WantedBy=multi-user.target
 EOF
 
 systemctl daemon-reload
-systemctl set-default multi-user.target
-systemctl enable --now nginx ssh ids-lab-route.service
+systemctl enable nginx ssh ids-lab-route.service
+systemctl restart nginx ssh ids-lab-route.service

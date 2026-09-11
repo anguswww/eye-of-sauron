@@ -27,13 +27,14 @@ inside the lab.
 ## Lab design
 
 ```text
-Ubuntu Desktop attacker   Ubuntu Desktop IDS/router       Ubuntu Server target
+Kali Linux attacker       Ubuntu IDS/router               Ubuntu Desktop target
 192.168.56.10  ------  192.168.56.30 | 192.168.57.30  ------  192.168.57.20
 ```
 
 The IDS sits between two private VM networks, so all attacker-to-target traffic
 crosses the IDS. Each VM also has a Vagrant-managed NAT adapter used only to
-download packages during setup.
+provision the machine, connect over SSH, and download packages. The lab uses
+AMD64 guests and is supported only on x86-64 Windows and Linux hosts.
 
 ## First-time setup
 
@@ -43,22 +44,18 @@ Complete these steps once on each team member's computer.
 
 You need:
 
-- A 64-bit Windows, macOS, or Linux computer with virtualization enabled
+- An x86-64 Windows or Linux computer with hardware virtualization enabled
 - At least 12 GB system RAM; 16 GB is preferable
-- At least 30 GB free disk space
-- Administrator access for installing VMware and the VMware Utility
+- At least 40 GB free disk space
+- Administrator access for installing VMware Workstation and the VMware Utility
 
-The running lab is allocated 7 GB RAM across its three VMs.
+The running lab is allocated 8 GB RAM across its three VMs.
 
 ### 2. Install VMware
 
-Install the current version of:
-
-- **macOS:** [VMware Fusion Pro](https://support.broadcom.com/)
-- **Windows or Linux:** [VMware Workstation Pro](https://support.broadcom.com/)
-
-VMware Fusion and Workstation are free for personal, educational, and
-commercial use. A free Broadcom account may be required for the download.
+Install the current x86-64 version of
+[VMware Workstation Pro](https://support.broadcom.com/) for Windows or Linux.
+A free Broadcom account may be required for the download.
 
 ### 3. Install Vagrant
 
@@ -86,24 +83,55 @@ not require a licence.
 
 ### 5. Install the Vagrant VMware Utility
 
-The plugin also requires a separate background service. Download the correct
-installer for your operating system and processor from the
-[current VMware Utility page](https://developer.hashicorp.com/vagrant/install/vmware),
-then run the installer.
+The plugin also requires a separate background service called the Vagrant
+VMware Utility. This is different from Vagrant itself. The Linux package-manager
+commands currently shown on HashiCorp's VMware Utility download page install
+the `vagrant` package, not the utility; do not repeat those commands for this
+step.
 
-On macOS or Linux, verify that the service is listening:
+On Ubuntu, Kubuntu, or Debian, download and install the AMD64 utility package
+directly from the [official HashiCorp release](https://releases.hashicorp.com/vagrant-vmware-utility/1.0.24/).
+Install `net-tools` on the host computer at the same time:
 
 ```bash
+cd /tmp
+wget https://releases.hashicorp.com/vagrant-vmware-utility/1.0.24/vagrant-vmware-utility_1.0.24-1_amd64.deb
+sudo apt install ./vagrant-vmware-utility_1.0.24-1_amd64.deb net-tools
+sudo systemctl enable --now vagrant-vmware-utility
+```
+
+The host installation of `net-tools` supplies `netstat`, which the VMware
+provider uses to check for host-network address collisions before creating
+private networks. Installing it inside one of the lab VMs will not satisfy this
+requirement.
+
+On Windows, download
+`vagrant-vmware-utility_1.0.24_windows_amd64.msi` from the same official release
+page and run the installer as an administrator. The installer creates and
+starts the `vagrant-vmware-utility` Windows service.
+
+The commands in this guide pin utility version 1.0.24 so that every team member
+installs the same release. The general
+[VMware Utility documentation](https://developer.hashicorp.com/vagrant/docs/providers/vmware/vagrant-vmware-utility)
+describes manual installation and service recovery if the package installer
+cannot be used.
+
+On Linux, verify that the service is listening:
+
+```bash
+systemctl is-active vagrant-vmware-utility
 nc -z 127.0.0.1 9922 && echo "VMware Utility is running"
 ```
 
 On Windows PowerShell, verify it with:
 
 ```powershell
+Get-Service vagrant-vmware-utility
 Test-NetConnection 127.0.0.1 -Port 9922
 ```
 
-Look for `TcpTestSucceeded : True`.
+The service should show as running or active, and the port check should report
+`TcpTestSucceeded : True` on Windows.
 
 ### 6. Install Wireshark
 
@@ -137,23 +165,24 @@ From the `eye-of-sauron/lab` directory, run:
 vagrant up --provider=vmware_desktop
 ```
 
-The first run downloads two pinned Ubuntu 24.04 LTS base images: Ubuntu Desktop
-for the attacker and IDS, and Ubuntu Server for the target. Both ARM64 and AMD64
-VMware builds are available, and Vagrant automatically downloads the build that
-matches each team member's computer. It is finished when Vagrant returns to the
-command prompt without an error. Later starts will be much faster.
+The first run downloads two pinned AMD64 base images: Kali Linux for the
+attacker and Ubuntu Desktop 24.04 LTS for both the IDS and target. It is
+finished when Vagrant returns to the command prompt without an error. Later
+starts will be much faster. The lab identifies the installed VMware product as
+Workstation Pro so the provider can use supported Workstation commands and
+space-efficient linked clones.
 
-Vagrant opens each VM in VMware Fusion or Workstation with the names
+Vagrant opens all three desktops in VMware Workstation with the names
 `Eye of Sauron - attacker`, `Eye of Sauron - ids`, and
 `Eye of Sauron - target`. Continue to start, stop, and delete them using
 Vagrant so its recorded state remains synchronized with VMware.
 
-The attacker and IDS are prebuilt Ubuntu Desktop 24.04 LTS machines; the desktop
-is part of the downloaded image rather than installed by a setup script. Sign in
-at their VMware consoles with username `vagrant` and password `vagrant`. The
-target is intentionally an Ubuntu Server 24.04 LTS text console because it is
-only used to host test services. The IDS desktop includes the graphical
-Wireshark application after provisioning.
+The attacker is a Kali Linux VM; the IDS and target are Ubuntu Desktop 24.04
+LTS VMs. Their desktop environments are part of the downloaded images rather
+than installed by a setup script. Sign in at any VMware console with username
+`vagrant` and password `vagrant`. The IDS desktop includes the graphical
+Wireshark application after provisioning, while the target hosts the lab test
+services.
 
 Do not close the terminal or put the computer to sleep during the first setup.
 
@@ -212,7 +241,7 @@ Run all Vagrant commands from `eye-of-sauron/lab`.
 
 When finished for the day, use `vagrant halt`. This preserves the VMs and makes
 the next startup quick. Avoid closing the VMware console windows directly,
-because Fusion may suspend the VMs instead of shutting them down through
+because Workstation may suspend the VMs instead of shutting them down through
 Vagrant.
 
 ## Where the VMs are stored
@@ -259,11 +288,17 @@ under `/workspace`. Vagrant asks for confirmation before deleting each VM.
 
 ### Vagrant says that no provider is available
 
-Confirm that VMware is installed and that the plugin appears in:
+Confirm that VMware Workstation is installed and that the plugin appears in:
 
 ```bash
 vagrant plugin list
 ```
+
+### The lab reports an unsupported host
+
+The lab intentionally accepts only x86-64 Windows and Linux hosts. Use a
+supported team computer rather than changing the guest architecture or
+provider.
 
 ### Vagrant cannot connect to the VMware Utility
 
@@ -301,10 +336,28 @@ vagrant up VM_NAME --provider=vmware_desktop
 
 Replace `VM_NAME` with `attacker`, `ids`, or `target`. This deletes data stored
 only inside that VM, but does not delete the repository or `/workspace` files.
-Check available macOS or Linux host space with `df -h`. On Windows, check the
-drive containing the repository in File Explorer. Keep at least 30 GB free
-before the first build because base-box downloads and temporary clone files can
-briefly require more space than the finished lab.
+Check available Linux host space with `df -h`. On Windows, check the drive
+containing the repository in File Explorer. Keep at least 40 GB free before the
+first build because base-box downloads and temporary clone files can briefly
+require more space than the finished lab.
+
+### `vmrun snapshot` reports `The operation is not supported`
+
+Current VMware Workstation is the full Pro product when used under its free
+licence. However, the Vagrant VMware provider can misidentify that licence as
+legacy VMware Player and invoke `vmrun -T player`, where snapshots and some VM
+control operations are unavailable. Pull the latest repository changes; the
+lab corrects this detection and makes the provider use Workstation mode:
+
+```bash
+git pull
+cd lab
+vagrant up --provider=vmware_desktop
+```
+
+Do not add a paid licence key or edit the VMware Utility service configuration.
+The Vagrantfile setting identifies the already-installed free Workstation Pro
+product; it does not install or bypass a VMware licence.
 
 ### Changes to provisioning are not appearing
 
