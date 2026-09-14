@@ -81,6 +81,10 @@ Vagrant.configure("2") do |config|
         provider.vmx["memsize"] = machine[:memory].to_s
         provider.vmx["numvcpus"] = machine[:cpus].to_s
 
+        # Some desktop boxes ship with HGFS explicitly disabled in their VMX,
+        # which wins over Vagrant's synced-folder configuration.
+        provider.vmx["isolation.tools.hgfs.disable"] = "FALSE"
+
         # The Kali box enables a second USB HID mouse in addition to VMware's
         # virtual PS/2 pointer. Xfce sees both devices and can hide the cursor.
         if name == "attacker"
@@ -91,6 +95,10 @@ Vagrant.configure("2") do |config|
       end
 
       node.vm.provision "shell", path: machine[:provision]
+
+      if name == "target" || name == "ids"
+        node.vm.provision "shell", path: "provision/desktop.sh"
+      end
     end
   end
 end
