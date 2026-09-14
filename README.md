@@ -14,8 +14,8 @@ eye-of-sauron/
 │   ├── Vagrantfile      VM, network, and resource definitions
 │   ├── provision/       Software installed inside each VM
 │   └── captures/        Local packet captures (not committed to Git)
-├── src/                 Future IDS application code
-├── tests/               Future automated tests
+├── src/                 Installable IDS Python package
+├── tests/               Automated Python tests
 └── README.md            Project and setup instructions
 ```
 
@@ -23,6 +23,42 @@ Keeping infrastructure in `lab/`, application code in `src/`, and tests in
 `tests/` is a common project layout. The whole repository is mounted at
 `/workspace` inside every VM, so code placed in `src/` is immediately available
 inside the lab.
+
+## Python development
+
+The IDS is an installable Python package managed with
+[`uv`](https://docs.astral.sh/uv/). Its project metadata is in
+`pyproject.toml`, its reproducible dependency resolution is in `uv.lock`, and
+the importable package is under `src/eye_of_sauron/`.
+
+Install `uv` by following its official installation instructions, then prepare
+the project from the repository root:
+
+```bash
+uv sync
+```
+
+Run the command-line application and automated checks without manually
+activating the virtual environment:
+
+```bash
+uv run eye-of-sauron --version
+uv run pytest
+uv run ruff check .
+```
+
+Add runtime dependencies with `uv add PACKAGE` and development-only tools with
+`uv add --dev PACKAGE`. Commit both `pyproject.toml` and `uv.lock`; never commit
+the generated `.venv/` directory.
+
+Google Colab can install the same package directly after cloning the repository:
+
+```python
+%pip install -e .
+```
+
+This lets notebooks import production modules from `eye_of_sauron` rather than
+maintaining separate copies of preprocessing or feature-extraction code.
 
 ## Lab design
 

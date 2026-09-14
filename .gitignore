@@ -11,3 +11,11 @@
 # Packet captures may be large or contain sensitive traffic.
 *.pcap
 *.pcapng
+
+# Python environments, caches, and generated files.
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
