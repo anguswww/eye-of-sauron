@@ -4,7 +4,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 echo 'wireshark-common wireshark-common/install-setuid boolean true' | debconf-set-selections
 apt-get update
-apt-get install -y --no-install-recommends git iproute2 iptables jq python3 tcpdump tshark wireshark
+apt-get install -y --no-install-recommends ca-certificates curl git iproute2 iptables jq python3 tcpdump tshark wireshark
 
 cat >/etc/sysctl.d/99-ids-lab.conf <<'EOF'
 net.ipv4.ip_forward=1
@@ -12,9 +12,21 @@ EOF
 sysctl --system >/dev/null
 
 install -d -o vagrant -g vagrant /opt/ids-lab/captures
-install -d /usr/local/lib/eye-of-sauron
-cp -RT /tmp/eye_of_sauron /usr/local/lib/eye-of-sauron/eye_of_sauron
 usermod -aG wireshark vagrant
+
+if ! command -v uv >/dev/null 2>&1; then
+  curl -LsSf https://astral.sh/uv/install.sh |
+    env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh
+fi
+
+install -d /opt/eye-of-sauron
+install -m 0644 /tmp/eye-of-sauron-README.md /opt/eye-of-sauron/README.md
+install -m 0644 /tmp/eye-of-sauron-pyproject.toml /opt/eye-of-sauron/pyproject.toml
+install -m 0644 /tmp/eye-of-sauron-uv.lock /opt/eye-of-sauron/uv.lock
+rm -rf /opt/eye-of-sauron/src
+cp -RT /tmp/eye-of-sauron-src /opt/eye-of-sauron/src
+UV_PROJECT_ENVIRONMENT=/opt/eye-of-sauron/.venv \
+  uv sync --frozen --no-dev --project /opt/eye-of-sauron
 
 cat >/usr/local/bin/capture-lab <<'EOF'
 #!/usr/bin/env bash
@@ -37,7 +49,6 @@ cat >/usr/local/bin/eye-of-sauron <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
-export PYTHONPATH=/usr/local/lib/eye-of-sauron
-exec python3 -m eye_of_sauron "$@"
+exec /opt/eye-of-sauron/.venv/bin/eye-of-sauron "$@"
 EOF
 chmod 0755 /usr/local/bin/eye-of-sauron

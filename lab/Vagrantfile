@@ -96,8 +96,17 @@ Vagrant.configure("2") do |config|
 
       if name == "ids"
         node.vm.provision "file",
-          source: "../src/eye_of_sauron",
-          destination: "/tmp/eye_of_sauron"
+          source: "../README.md",
+          destination: "/tmp/eye-of-sauron-README.md"
+        node.vm.provision "file",
+          source: "../pyproject.toml",
+          destination: "/tmp/eye-of-sauron-pyproject.toml"
+        node.vm.provision "file",
+          source: "../uv.lock",
+          destination: "/tmp/eye-of-sauron-uv.lock"
+        node.vm.provision "file",
+          source: "../src",
+          destination: "/tmp/eye-of-sauron-src"
       end
 
       node.vm.provision "shell", path: machine[:provision]
