@@ -1,0 +1,26 @@
+# Eye of Sauron VM shell configuration
+
+export ZSH="$HOME/.oh-my-zsh"
+ZSH_THEME="fino"
+plugins=(git)
+
+if [[ -r "$ZSH/oh-my-zsh.sh" ]]; then
+  source "$ZSH/oh-my-zsh.sh"
+fi
+
+# Make it obvious which VM a terminal belongs to.
+case "${HOSTNAME#ids-}" in
+  attacker) vm_label='ATTACKER'; vm_colour='red' ;;
+  target)   vm_label='TARGET';   vm_colour='green' ;;
+  sensor|ids) vm_label='IDS';     vm_colour='cyan' ;;
+  *)         vm_label="${HOSTNAME^^}"; vm_colour='yellow' ;;
+esac
+
+if [[ "$RPROMPT" != *"[$vm_label]"* ]]; then
+  RPROMPT="${RPROMPT:+$RPROMPT }%F{$vm_colour}[$vm_label]%f"
+fi
+
+# uv adds this file when it installs its user-local environment.
+if [[ -r "$HOME/.local/bin/env" ]]; then
+  source "$HOME/.local/bin/env"
+fi

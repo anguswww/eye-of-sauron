@@ -5,6 +5,7 @@ from scapy.all import AsyncSniffer
 def handle_packet(packet):
     # implement properly later, need flow tracker to be implemented first.
     # flow_tracker.add(packet)
+    packet.summary()
     pass
 
 

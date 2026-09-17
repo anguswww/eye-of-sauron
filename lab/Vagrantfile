@@ -9,6 +9,21 @@ unless host_cpu.match?(/x86_64|amd64|x64/i) && host_os.match?(/linux|mingw|mswin
   raise "This lab supports only x86-64 Windows and Linux hosts."
 end
 
+# VMware calls configure_networks even when every Kali private network has
+# auto_config: false. Vagrant's inherited Debian capability then restarts
+# systemd-networkd with an empty network list, dropping the NAT SSH session.
+class AttackerNetworkPlugin < Vagrant.plugin("2")
+  name "Eye of Sauron Kali network guard"
+
+  guest_capability(:kali, :configure_networks) do
+    Class.new do
+      def self.configure_networks(_machine, networks)
+        raise "The attacker networks must use auto_config: false" unless networks.empty?
+      end
+    end
+  end
+end
+
 Vagrant.configure("2") do |config|
   config.vm.box_check_update = false
 
@@ -88,9 +103,13 @@ Vagrant.configure("2") do |config|
         # The Kali box enables a second USB HID mouse in addition to VMware's
         # virtual PS/2 pointer. Xfce sees both devices and can hide the cursor.
         if name == "attacker"
+          # Kali's box uses virtual hardware 8, which can leave the mouse
+          # cursor invisible on current VMware Workstation releases.
+          provider.vmx["virtualHW.version"] = "20"
           provider.vmx["usb.present"] = "FALSE"
           provider.vmx["usb.generic.allowHID"] = "FALSE"
           provider.vmx["usb:0.present"] = "FALSE"
+          provider.vmx["usb:1.present"] = "FALSE"
         end
       end
 
@@ -109,6 +128,10 @@ Vagrant.configure("2") do |config|
           destination: "/tmp/eye-of-sauron-src"
       end
 
+      node.vm.provision "file",
+        source: "provision/zshrc",
+        destination: "/tmp/eye-of-sauron-zshrc"
+      node.vm.provision "shell", path: "provision/zsh.sh"
       node.vm.provision "shell", path: machine[:provision]
 
       if name == "target" || name == "ids"
