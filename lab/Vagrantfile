@@ -133,6 +133,7 @@ Vagrant.configure("2") do |config|
         destination: "/tmp/eye-of-sauron-zshrc"
       node.vm.provision "shell", path: "provision/zsh.sh"
       node.vm.provision "shell", path: machine[:provision]
+      node.vm.provision "no_sleep", type: "shell", path: "provision/no-sleep.sh"
 
       if name == "target" || name == "ids"
         node.vm.provision "shell", path: "provision/desktop.sh"

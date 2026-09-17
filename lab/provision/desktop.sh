@@ -39,5 +39,3 @@ cat >/etc/dconf/db/local.d/locks/00-ids-lab-desktop <<'EOF'
 EOF
 
 dconf update
-
-systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
